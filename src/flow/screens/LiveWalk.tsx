@@ -77,12 +77,14 @@ export function LiveWalk({
   booking,
   back,
   restart,
+  onMessage,
 }: {
   sitter: Sitter;
   form: FlowForm;
   booking: Booking;
   back: () => void;
   restart: () => void;
+  onMessage: () => void;
 }) {
   const [pct, setPct] = React.useState(0);
   const [map, setMap] = React.useState({ w: VB_W, h: VB_H });
@@ -200,7 +202,7 @@ export function LiveWalk({
             )}
             <View style={styles.actions}>
               <View style={{ flex: 1 }}>
-                <PrimaryButton title="Message" sage onPress={() => {}} />
+                <PrimaryButton title="Message" sage onPress={onMessage} />
               </View>
               <View style={{ flex: 1 }}>
                 <PrimaryButton title="Hide" onPress={back} />

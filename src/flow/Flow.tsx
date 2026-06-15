@@ -17,6 +17,7 @@ import { ActivityIndicator, Animated, Easing, StyleSheet, useWindowDimensions, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Booking, FlowForm, SITTERS, Sitter } from './data';
 import { Booking as BookingScreen } from './screens/Booking';
+import { Chat } from './screens/Chat';
 import { Choice } from './screens/Choice';
 import { DateTime } from './screens/DateTime';
 import { Discover } from './screens/Discover';
@@ -79,8 +80,21 @@ export default function Flow() {
     go(0);
   };
 
+  // chat modal overlay (slides up over the live walk, which keeps running underneath)
+  const { width, height } = useWindowDimensions();
+  const [chatMounted, setChatMounted] = React.useState(false);
+  const chatAnim = React.useRef(new Animated.Value(0)).current;
+  const openChat = () => {
+    setChatMounted(true);
+    Animated.timing(chatAnim, { toValue: 1, duration: 300, easing: Easing.bezier(0.22, 0.61, 0.36, 1), useNativeDriver: true }).start();
+  };
+  const closeChat = () => {
+    Animated.timing(chatAnim, { toValue: 0, duration: 260, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start(({ finished }) => {
+      if (finished) setChatMounted(false);
+    });
+  };
+
   // two-layer push transition: incoming slides in, outgoing parallaxes out + fades.
-  const { width } = useWindowDimensions();
   const anim = React.useRef(new Animated.Value(1)).current;
   const prevStepRef = React.useRef(step);
   const [outgoing, setOutgoing] = React.useState<{ step: number; dir: Exclude<Dir, null> } | null>(null);
@@ -125,8 +139,10 @@ export default function Flow() {
     5: <DateTime booking={booking} setBooking={setBooking} go={next} back={back} />,
     6: <BookingScreen form={form} sitter={sitter} booking={booking} go={next} back={back} />,
     7: <Success form={form} sitter={sitter} booking={booking} track={() => go(8)} restart={restart} />,
-    8: <LiveWalk sitter={sitter} form={form} booking={booking} back={() => go(7)} restart={restart} />,
+    8: <LiveWalk sitter={sitter} form={form} booking={booking} back={() => go(7)} restart={restart} onMessage={openChat} />,
   };
+
+  const chatTranslateY = chatAnim.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -140,6 +156,11 @@ export default function Flow() {
       <Animated.View key={step} style={[styles.stage, { transform: [{ translateX: inTranslate }], opacity: inOpacity }]}>
         {screens[step]}
       </Animated.View>
+      {chatMounted && (
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: chatTranslateY }] }]}>
+          <Chat sitter={sitter} form={form} onClose={closeChat} />
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
