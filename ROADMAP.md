@@ -43,6 +43,7 @@ Rationale: in a market owned by Rover/Wag (utilitarian, transactional), a distin
 - [ ] **Tele-vet** consultation partnership.
 
 ## Tech notes
-- Expo **SDK 54** (Expo Go compatible). Flow code in `flow/`, routes in `app/`.
-- True **SF Symbols** and **Liquid Glass** materials need a *development build* (not Expo Go).
+- Expo **SDK 56** (latest). Flow code in `flow/`, routes in `app/`.
+- **Testing = Vercel web URL** (same code, full-screen in Safari) — no Expo Go / no local `expo start` needed.
+- True **SF Symbols** and **Liquid Glass** materials need a *development build* (separate, later track).
 - Deploy: `git push` → Vercel (`vercel.json`: `expo export -p web` → `dist/`).
