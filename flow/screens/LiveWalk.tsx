@@ -1,10 +1,11 @@
 import React from 'react';
-import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { Image, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Booking, FlowForm, Sitter, WALK_PHOTO } from '../data';
 import { Check, Msg, Paw, Verified } from '../icons';
 import { colors, fonts, shadows } from '../theme';
 import { ImageSlot, PrimaryButton } from '../ui';
+import { getLiveWalkMapUrl, isMapboxConfigured } from '../mapbox';
 
 const ROUTE = 'M58,116 C150,90 104,198 196,198 C258,198 280,262 184,298 C122,324 152,366 100,350';
 const VB_W = 322;
@@ -91,6 +92,16 @@ export function LiveWalk({
   const first = sitter.name.split(' ')[0];
   const dur = booking.duration || 30;
 
+  // Mapbox image URL
+  const [mapboxUrl, setMapboxUrl] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isMapboxConfigured && map.w > 0 && map.h > 0) {
+      const url = getLiveWalkMapUrl(map.w, map.h);
+      setMapboxUrl(url);
+    }
+  }, [map]);
+
   React.useEffect(() => {
     const DURATION = 22000;
     const t0 = Date.now();
@@ -118,23 +129,47 @@ export function LiveWalk({
   const showPhoto = pct > 0.16 && pct < 1;
   const done = pct >= 1;
 
+  // Use Mapbox if configured and URL is available
+  const useMapbox = isMapboxConfigured && mapboxUrl !== null;
+
   return (
     <View style={styles.screen}>
       <View style={styles.map} onLayout={onMap}>
-        <Svg width="100%" height="100%" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet" style={StyleSheet.absoluteFill}>
-          <Path d={ROUTE} fill="none" stroke="#E0D4BE" strokeWidth={7} strokeLinecap="round" />
-          <Path
-            d={ROUTE}
-            fill="none"
-            stroke={colors.terracotta}
-            strokeWidth={5}
-            strokeLinecap="round"
-            strokeDasharray={LUT.total}
-            strokeDashoffset={LUT.total * (1 - pct)}
+        {/* Mapbox Static Image Background */}
+        {useMapbox && (
+          <Image
+            source={{ uri: mapboxUrl! }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
           />
-          <Circle cx={58} cy={116} r={6} fill="#fff" stroke={colors.sage} strokeWidth={3} />
-          <Circle cx={100} cy={350} r={12} fill={colors.sage} stroke="#fff" strokeWidth={3} />
-        </Svg>
+        )}
+
+        {/* Fallback: Original SVG map with route */}
+        {!useMapbox && (
+          <Svg width="100%" height="100%" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet" style={StyleSheet.absoluteFill}>
+            <Path d={ROUTE} fill="none" stroke="#E0D4BE" strokeWidth={7} strokeLinecap="round" />
+            <Path
+              d={ROUTE}
+              fill="none"
+              stroke={colors.terracotta}
+              strokeWidth={5}
+              strokeLinecap="round"
+              strokeDasharray={LUT.total}
+              strokeDashoffset={LUT.total * (1 - pct)}
+            />
+            <Circle cx={58} cy={116} r={6} fill="#fff" stroke={colors.sage} strokeWidth={3} />
+            <Circle cx={100} cy={350} r={12} fill={colors.sage} stroke="#fff" strokeWidth={3} />
+          </Svg>
+        )}
+
+        {/* SVG overlay for route (when using Mapbox background) */}
+        {useMapbox && (
+          <Svg width="100%" height="100%" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="xMidYMid meet" style={StyleSheet.absoluteFill}>
+            <Path d={ROUTE} fill="none" stroke={colors.terracotta} strokeWidth={5} strokeLinecap="round" strokeDasharray={LUT.total} strokeDashoffset={LUT.total * (1 - pct)} />
+            <Circle cx={58} cy={116} r={6} fill="#fff" stroke={colors.sage} strokeWidth={3} />
+            <Circle cx={100} cy={350} r={12} fill={colors.sage} stroke="#fff" strokeWidth={3} />
+          </Svg>
+        )}
 
         <View style={[styles.marker, { left: markerX, top: markerY }]} pointerEvents="none">
           <View style={styles.markerRing} />

@@ -1,9 +1,10 @@
 import React from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Sitter } from '../data';
 import { Paw, Search, Star, Verified } from '../icons';
 import { colors, fonts, shadows } from '../theme';
 import { FloatingBack, ImageSlot, PrimaryButton } from '../ui';
+import { getDiscoverMapUrl, isMapboxConfigured } from '../mapbox';
 
 const DESIGN_W = 322; // map coordinate space from proto.jsx
 
@@ -21,20 +22,48 @@ export function Discover({
   back: () => void;
 }) {
   const [s, setS] = React.useState(1); // scale factor map width / 322
-  const onLayout = (e: LayoutChangeEvent) => setS(e.nativeEvent.layout.width / DESIGN_W);
+  const [mapSize, setMapSize] = React.useState({ width: 0, height: 0 });
+  const onLayout = (e: LayoutChangeEvent) => {
+    const width = e.nativeEvent.layout.width;
+    const height = e.nativeEvent.layout.height;
+    setS(width / DESIGN_W);
+    setMapSize({ width, height });
+  };
   const first = sitter.name.split(' ')[0];
+
+  // Generate Mapbox URL when size is known
+  const mapboxUrl = React.useMemo(() => {
+    if (!isMapboxConfigured || mapSize.width === 0 || mapSize.height === 0) return null;
+    return getDiscoverMapUrl(mapSize.width, mapSize.height, sitters);
+  }, [mapSize, sitters]);
+
+  // Use Mapbox image as background if configured and URL is available
+  const useMapbox = isMapboxConfigured && mapboxUrl !== null;
 
   return (
     <View style={styles.screen}>
       <View style={styles.map} onLayout={onLayout}>
-        {/* stylized streets / parks / water */}
-        <View style={[styles.street, { top: 70 * s, left: -40 * s, width: 420 * s, transform: [{ rotate: '-8deg' }] }]} />
-        <View style={[styles.street, { top: 200 * s, left: -40 * s, width: 420 * s, transform: [{ rotate: '6deg' }] }]} />
-        <View style={[styles.streetV, { left: 110 * s, top: -40 * s, height: 520 * s, transform: [{ rotate: '4deg' }] }]} />
-        <View style={[styles.streetV, { left: 240 * s, top: -40 * s, height: 520 * s, transform: [{ rotate: '-3deg' }] }]} />
-        <View style={[styles.park, { left: 150 * s, top: 96 * s, width: 70 * s, height: 70 * s }]} />
-        <View style={[styles.park, { left: 24 * s, top: 150 * s, width: 60 * s, height: 46 * s }]} />
-        <View style={[styles.water, { left: 200 * s, top: 220 * s, width: 130 * s, height: 150 * s }]} />
+        {/* Mapbox Static Image Background */}
+        {useMapbox && (
+          <Image
+            source={{ uri: mapboxUrl! }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
+        )}
+
+        {/* Fallback: Original stylized SVG map */}
+        {!useMapbox && (
+          <>
+            <View style={[styles.street, { top: 70 * s, left: -40 * s, width: 420 * s, transform: [{ rotate: '-8deg' }] }]} />
+            <View style={[styles.street, { top: 200 * s, left: -40 * s, width: 420 * s, transform: [{ rotate: '6deg' }] }]} />
+            <View style={[styles.streetV, { left: 110 * s, top: -40 * s, height: 520 * s, transform: [{ rotate: '4deg' }] }]} />
+            <View style={[styles.streetV, { left: 240 * s, top: -40 * s, height: 520 * s, transform: [{ rotate: '-3deg' }] }]} />
+            <View style={[styles.park, { left: 150 * s, top: 96 * s, width: 70 * s, height: 70 * s }]} />
+            <View style={[styles.park, { left: 24 * s, top: 150 * s, width: 60 * s, height: 46 * s }]} />
+            <View style={[styles.water, { left: 200 * s, top: 220 * s, width: 130 * s, height: 150 * s }]} />
+          </>
+        )}
 
         <FloatingBack onPress={back} style={{ top: 58, left: 16 }} />
 
